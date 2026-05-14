@@ -9,8 +9,8 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-header, [data-testid="stHeader"], [data-testid="stToolbar"], #MainMenu { display: none !important; }
-.block-container { padding-top: 1rem !important; }
+[data-testid="stStatusWidget"] { display: none !important; }
+[data-testid="stToolbar"] { display: none !important; }
 </style>
 """, unsafe_allow_html=True)
 

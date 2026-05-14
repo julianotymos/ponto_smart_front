@@ -6,8 +6,8 @@ from datetime import date, datetime, time, timedelta
 st.set_page_config(page_title="Ajuste de Ponto - Ponto Smart", layout="wide")
 st.markdown("""
 <style>
-header, [data-testid="stHeader"], [data-testid="stToolbar"], #MainMenu { display: none !important; }
-.block-container { padding-top: 1rem !important; }
+[data-testid="stStatusWidget"] { display: none !important; }
+[data-testid="stToolbar"] { display: none !important; }
 </style>
 """, unsafe_allow_html=True)
 
