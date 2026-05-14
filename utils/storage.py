@@ -1,3 +1,4 @@
+import os
 import requests
 import streamlit as st
 
@@ -9,8 +10,12 @@ def upload_photo(file_bytes: bytes, employee_code: str, content_type: str) -> st
     ext = content_type.split("/")[-1].replace("jpeg", "jpg")
     file_name = f"{employee_code}.{ext}"
 
-    url = st.secrets["supabase"]["url"]
-    key = st.secrets["supabase"]["service_key"]
+    try:
+        url = st.secrets["supabase"]["url"]
+        key = st.secrets["supabase"]["service_key"]
+    except Exception:
+        url = os.environ["SUPABASE_URL"]
+        key = os.environ["SUPABASE_SERVICE_KEY"]
 
     endpoint = f"{url}/storage/v1/object/{BUCKET}/{file_name}"
 
