@@ -18,9 +18,7 @@ header[data-testid="stHeader"] { height: 2.5rem !important; min-height: 2.5rem !
 </style>
 """, unsafe_allow_html=True)
 
-st.title("Ponto Smart")
-st.subheader("Sistema de Gestao de Ponto Eletronico")
-st.markdown("---")
+st.markdown("# Ponto Smart\n##### Sistema de Gestao de Ponto Eletronico\n---")
 
 col_form, col_info = st.columns([1, 2])
 
