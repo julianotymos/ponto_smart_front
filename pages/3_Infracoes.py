@@ -6,7 +6,7 @@ st.set_page_config(page_title="Infracoes - Ponto Smart", layout="wide")
 st.markdown("""
 <style>
 [data-testid="stStatusWidget"] { display: none !important; }
-.block-container { padding-top: 0.5rem !important; }
+.block-container { padding-top: 2rem !important; }
 </style>
 """, unsafe_allow_html=True)
 
