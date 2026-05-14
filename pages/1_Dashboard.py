@@ -6,10 +6,6 @@ st.set_page_config(page_title="Dashboard - Ponto Smart", layout="wide")
 st.markdown("""
 <style>
 [data-testid="stStatusWidget"] { display: none !important; }
-[data-testid="collapsedControl"] svg { display: none !important; }
-[data-testid="collapsedControl"]::before { content: "\\2630"; font-size: 1.4rem; line-height: 1; }
-[data-testid="stSidebarNavToggle"] svg { display: none !important; }
-[data-testid="stSidebarNavToggle"]::before { content: "\\2630"; font-size: 1.4rem; line-height: 1; }
 </style>
 """, unsafe_allow_html=True)
 
