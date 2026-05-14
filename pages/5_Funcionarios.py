@@ -10,16 +10,6 @@ st.markdown("""
 @media (min-width: 768px) { .block-container { padding-top: 0.5rem !important; } }
 h1, h2, h3 { margin-bottom: 0.5rem !important; }
 hr { margin-top: 0.5rem !important; margin-bottom: 0.5rem !important; }
-header[data-testid="stHeader"] { position: relative; overflow: hidden; }
-header[data-testid="stHeader"]::after {
-    content: "Ponto Smart";
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 1rem;
-    font-weight: 600;
-}
 </style>
 """, unsafe_allow_html=True)
 
