@@ -6,7 +6,8 @@ import pandas as pd
 st.set_page_config(page_title="Relatorio de Ponto - Ponto Smart", layout="wide")
 st.markdown("""
 <style>
-header[data-testid="stHeader"] { display: none; }
+header, [data-testid="stHeader"], [data-testid="stToolbar"], #MainMenu { display: none !important; }
+.block-container { padding-top: 1rem !important; }
 </style>
 """, unsafe_allow_html=True)
 
