@@ -7,8 +7,8 @@ st.markdown("""
 <style>
 [data-testid="stStatusWidget"] { display: none !important; }
 .block-container { padding-top: 1rem !important; }
-h1, h2, h3 { margin-bottom: 0.2rem !important; }
-hr { margin-top: 0.2rem !important; }
+h1, h2, h3 { margin-bottom: 0.5rem !important; }
+hr { margin-top: 0.5rem !important; margin-bottom: 0.5rem !important; }
 </style>
 """, unsafe_allow_html=True)
 
