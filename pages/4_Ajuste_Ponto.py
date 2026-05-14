@@ -4,6 +4,11 @@ from utils.db import db_cursor
 from datetime import date, datetime, time, timedelta
 
 st.set_page_config(page_title="Ajuste de Ponto - Ponto Smart", layout="wide")
+st.markdown("""
+<style>
+header[data-testid="stHeader"] { display: none; }
+</style>
+""", unsafe_allow_html=True)
 
 
 def require_login():

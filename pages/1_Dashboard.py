@@ -3,6 +3,11 @@ from utils.db import db_cursor
 from datetime import date
 
 st.set_page_config(page_title="Dashboard - Ponto Smart", layout="wide")
+st.markdown("""
+<style>
+header[data-testid="stHeader"] { display: none; }
+</style>
+""", unsafe_allow_html=True)
 
 
 def require_login():

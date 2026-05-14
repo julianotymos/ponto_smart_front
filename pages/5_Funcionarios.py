@@ -3,6 +3,11 @@ from utils.db import db_cursor
 from datetime import date
 
 st.set_page_config(page_title="Funcionarios - Ponto Smart", layout="wide")
+st.markdown("""
+<style>
+header[data-testid="stHeader"] { display: none; }
+</style>
+""", unsafe_allow_html=True)
 
 ESTADOS_BR = [
     "AC", "AL", "AM", "AP", "BA", "CE", "DF", "ES", "GO",

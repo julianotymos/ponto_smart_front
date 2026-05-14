@@ -7,6 +7,12 @@ st.set_page_config(
     layout="wide",
 )
 
+st.markdown("""
+<style>
+header[data-testid="stHeader"] { display: none; }
+</style>
+""", unsafe_allow_html=True)
+
 st.title("Ponto Smart")
 st.subheader("Sistema de Gestao de Ponto Eletronico")
 st.markdown("---")

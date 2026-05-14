@@ -4,6 +4,11 @@ from datetime import date, timedelta
 import pandas as pd
 
 st.set_page_config(page_title="Relatorio de Ponto - Ponto Smart", layout="wide")
+st.markdown("""
+<style>
+header[data-testid="stHeader"] { display: none; }
+</style>
+""", unsafe_allow_html=True)
 
 
 def require_login():
