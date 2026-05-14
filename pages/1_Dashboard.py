@@ -6,7 +6,7 @@ st.set_page_config(page_title="Dashboard - Ponto Smart", layout="wide")
 st.markdown("""
 <style>
 [data-testid="stStatusWidget"] { display: none !important; }
-.block-container { padding-top: 2rem !important; }
+.block-container { padding-top: 1.5rem !important; }
 </style>
 """, unsafe_allow_html=True)
 
