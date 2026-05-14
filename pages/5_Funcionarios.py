@@ -6,7 +6,6 @@ st.set_page_config(page_title="Funcionarios - Ponto Smart", layout="wide")
 st.markdown("""
 <style>
 [data-testid="stStatusWidget"] { display: none !important; }
-[data-testid="stToolbar"] { display: none !important; }
 </style>
 """, unsafe_allow_html=True)
 

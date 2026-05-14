@@ -10,7 +10,6 @@ st.set_page_config(
 st.markdown("""
 <style>
 [data-testid="stStatusWidget"] { display: none !important; }
-[data-testid="stToolbar"] { display: none !important; }
 </style>
 """, unsafe_allow_html=True)
 
