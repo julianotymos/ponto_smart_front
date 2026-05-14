@@ -7,6 +7,7 @@ st.set_page_config(page_title="Ajuste de Ponto - Ponto Smart", layout="wide")
 st.markdown("""
 <style>
 [data-testid="stStatusWidget"] { display: none !important; }
+.block-container { padding-top: 0.5rem !important; }
 </style>
 """, unsafe_allow_html=True)
 
