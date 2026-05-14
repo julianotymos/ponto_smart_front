@@ -7,7 +7,6 @@ st.markdown("""
 <style>
 [data-testid="stStatusWidget"] { display: none !important; }
 .block-container { padding-top: 1rem !important; }
-@media (min-width: 768px) { .block-container { padding-top: 0.5rem !important; } }
 h1, h2, h3 { margin-bottom: 0.5rem !important; }
 hr { margin-top: 0.5rem !important; margin-bottom: 0.5rem !important; }
 </style>
