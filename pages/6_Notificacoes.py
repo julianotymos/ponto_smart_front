@@ -70,11 +70,11 @@ with aba_cadastro:
         )
 
     st.markdown("##### Período de exibição")
+    usa_fim = st.checkbox("Definir data fim")
     col3, col4 = st.columns(2)
     with col3:
         data_inicio = st.date_input("Data início *", value=date.today())
     with col4:
-        usa_fim = st.checkbox("Definir data fim")
         data_fim = None
         if usa_fim:
             data_fim = st.date_input("Data fim", value=date.today(), key="data_fim")
@@ -280,11 +280,11 @@ with aba_lista:
                     )
 
                 st.markdown("##### Período de exibição")
+                e_usa_fim = st.checkbox("Definir data fim", value=detalhe["end_date"] is not None, key="e_usa_fim")
                 col_e3, col_e4 = st.columns(2)
                 with col_e3:
                     e_inicio = st.date_input("Data início *", value=detalhe["start_date"], key="e_inicio")
                 with col_e4:
-                    e_usa_fim = st.checkbox("Definir data fim", value=detalhe["end_date"] is not None, key="e_usa_fim")
                     e_fim = None
                     if e_usa_fim:
                         e_fim = st.date_input("Data fim", value=detalhe["end_date"] or date.today(), key="e_fim")
