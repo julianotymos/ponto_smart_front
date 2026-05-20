@@ -1,6 +1,7 @@
 import streamlit as st
 from utils.db import db_cursor
 from datetime import datetime
+import time
 
 st.set_page_config(page_title="Empresa - Ponto Smart", layout="wide")
 st.markdown("""
@@ -99,6 +100,7 @@ with aba_dados:
                         company_id
                     ))
                 st.success("Dados atualizados com sucesso!")
+                time.sleep(2)
                 st.rerun()
             except Exception as ex:
                 st.error(f"Erro ao salvar: {ex}")
@@ -147,6 +149,7 @@ with aba_localizacao:
                         raio, company_id
                     ))
                 st.success("Localização atualizada com sucesso!")
+                time.sleep(2)
                 st.rerun()
             except Exception as ex:
                 st.error(f"Erro ao salvar: {ex}")
@@ -159,6 +162,7 @@ with aba_localizacao:
                         WHERE id = %s
                     """, (company_id,))
                 st.success("Localização removida.")
+                time.sleep(2)
                 st.rerun()
             except Exception as ex:
                 st.error(f"Erro: {ex}")
