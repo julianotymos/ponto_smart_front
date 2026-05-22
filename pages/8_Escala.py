@@ -1,4 +1,4 @@
-﻿import streamlit as st
+import streamlit as st
 from utils.db import db_cursor
 from datetime import date, timedelta, time as Time, datetime, timezone
 import pandas as pd
@@ -20,7 +20,6 @@ header[data-testid="stHeader"] { height: 2.5rem !important; min-height: 2.5rem !
 SYSTEM_USER = 1
 DIAS_PT = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
 
-# Horário de funcionamento (dia_semana 0=Seg): (abertura, fechamento)
 STORE_OPEN  = {0: Time(11,30), 1: Time(11,30), 2: Time(11,30),
                3: Time(11,30), 4: Time(11,30), 5: Time(11, 0), 6: Time(12, 0)}
 STORE_CLOSE = {0: Time(21, 0), 1: Time(21, 0), 2: Time(21, 0),
@@ -35,7 +34,6 @@ def require_login():
 
 
 def parse_cell(cell):
-    """Retorna (start_time, is_day_off). Aceita 'HH:MM' ou 'Folga' ou vazio."""
     v = str(cell).strip() if cell and not pd.isna(cell) else ""
     if not v:
         return None, False
@@ -43,7 +41,7 @@ def parse_cell(cell):
         return None, True
     m = re.match(r"(\d{1,2}):(\d{2})$", v)
     if not m:
-        return None, None  # None, None = formato inválido
+        return None, None
     try:
         return Time(int(m[1]), int(m[2])), False
     except ValueError:
@@ -51,13 +49,11 @@ def parse_cell(cell):
 
 
 def calc_end(start: Time, shift_minutes: int) -> Time:
-    """start_time + shift_minutes (já inclui intervalo)."""
     dt = datetime(2000, 1, 1, start.hour, start.minute) + timedelta(minutes=shift_minutes)
     return dt.time()
 
 
 def shift_minutes(weekly_workload) -> int:
-    """Minutos totais do turno = carga_semanal/5 + 1h de intervalo."""
     daily_h = float(weekly_workload or 40.0) / 5.0
     return int(daily_h * 60) + 60
 
@@ -75,7 +71,6 @@ def cell_from_row(row) -> str:
 
 
 def count_presentes(df: pd.DataFrame, col_headers: list) -> pd.DataFrame:
-    """Retorna DataFrame de 1 linha com contagem de pessoas trabalhando por dia."""
     counts = {}
     for h in col_headers:
         n = 0
@@ -91,7 +86,6 @@ def count_presentes(df: pd.DataFrame, col_headers: list) -> pd.DataFrame:
 
 
 def style_presentes(df_count: pd.DataFrame) -> object:
-    """Aplica cor verde (≥2) ou vermelha (<2) na linha de contagem."""
     def color(val):
         return "background-color:#d4edda;color:#155724;font-weight:bold" if val >= 2 \
                else "background-color:#f8d7da;color:#721c24;font-weight:bold"
@@ -120,9 +114,8 @@ def validate_grid(df: pd.DataFrame, col_headers: list, emp_shift: dict[str, int]
         if not any(e >= close_t for _, e in intervals):
             msgs.append(f"**{day_label}** — ninguém cobre o fechamento ({fmt(close_t)})")
 
-        if dow <= 4:  # Seg–Sex: mínimo 2 pessoas simultâneas de 12:30 até o fechamento
+        if dow <= 4:
             WIN = Time(12, 30)
-            # Pontos críticos = início/fim de cada turno dentro da janela + 12:30
             critical = sorted({WIN} | {
                 t for s, e in intervals for t in (s, e)
                 if WIN <= t <= close_t
@@ -139,7 +132,7 @@ def validate_grid(df: pd.DataFrame, col_headers: list, emp_shift: dict[str, int]
                     f"**{day_label}** — apenas {min_n} pessoa(s) às {fmt(min_t)} "
                     f"(mínimo 2 entre 12:30–{fmt(close_t)})"
                 )
-        else:  # Sáb/Dom: pelo menos 2 às 14:00
+        else:
             midday = sum(1 for s, e in intervals if s <= MIDDAY_CHECK <= e)
             if midday < 2:
                 msgs.append(f"**{day_label}** — menos de 2 pessoas às {fmt(MIDDAY_CHECK)} ({midday})")
@@ -147,13 +140,81 @@ def validate_grid(df: pd.DataFrame, col_headers: list, emp_shift: dict[str, int]
     return msgs
 
 
+# ─── Dialogs de confirmação ────────────────────────────────────────────────────
+
+@st.dialog("💾 Salvar Escala")
+def dlg_salvar_semana(week_label: str):
+    st.markdown(f"Confirmar salvamento da escala da semana **{week_label}**?")
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("✅ Salvar", type="primary", use_container_width=True):
+            st.session_state["_confirm_action"] = "save_week"
+            st.rerun()
+    with col2:
+        if st.button("Cancelar", use_container_width=True):
+            st.rerun()
+
+
+@st.dialog("🗑️ Excluir Escala da Semana")
+def dlg_excluir_semana(week_label: str):
+    st.warning(f"Remove **todos** os registros da semana **{week_label}** para todos os funcionários.")
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("🗑️ Excluir", type="primary", use_container_width=True):
+            st.session_state["_confirm_action"] = "delete_week"
+            st.rerun()
+    with col2:
+        if st.button("Cancelar", use_container_width=True):
+            st.rerun()
+
+
+@st.dialog("💾 Salvar Template")
+def dlg_salvar_template():
+    st.markdown("Confirmar salvamento do template semanal?")
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("✅ Salvar", type="primary", use_container_width=True):
+            st.session_state["_confirm_action"] = "save_template"
+            st.rerun()
+    with col2:
+        if st.button("Cancelar", use_container_width=True):
+            st.rerun()
+
+
+@st.dialog("💾 Salvar Escala Gerada")
+def dlg_salvar_gerada():
+    st.markdown("Confirmar salvamento da escala gerada?")
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("✅ Salvar", type="primary", use_container_width=True):
+            st.session_state["_confirm_action"] = "save_generated"
+            st.rerun()
+    with col2:
+        if st.button("Cancelar", use_container_width=True):
+            st.rerun()
+
+
+@st.dialog("🗑️ Descartar Escala Gerada")
+def dlg_descartar_gerada():
+    st.warning("Descarta a prévia gerada sem salvar. Continuar?")
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("🗑️ Descartar", type="primary", use_container_width=True):
+            st.session_state["_confirm_action"] = "discard_generated"
+            st.rerun()
+    with col2:
+        if st.button("Cancelar", use_container_width=True):
+            st.rerun()
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+
 require_login()
 company_id = st.session_state["company_id"]
 
 st.title("📅 Escala de Trabalho")
 st.markdown("---")
 
-# Carrega funcionários ativos com carga horária
 with db_cursor() as (_, cur):
     cur.execute("""
         SELECT id, first_name || ' ' || last_name AS name, weekly_workload
@@ -170,8 +231,8 @@ if not employees:
 emp_ids      = [e["id"]   for e in employees]
 emp_names    = [e["name"] for e in employees]
 emp_by_name  = {e["name"]: e["id"] for e in employees}
-emp_wl       = {e["name"]: e["weekly_workload"] for e in employees}       # horas/semana
-emp_shift    = {e["name"]: shift_minutes(e["weekly_workload"]) for e in employees}  # min/dia
+emp_wl       = {e["name"]: e["weekly_workload"] for e in employees}
+emp_shift    = {e["name"]: shift_minutes(e["weekly_workload"]) for e in employees}
 emp_wl_by_id = {e["id"]: e["weekly_workload"] for e in employees}
 
 tab_semana, tab_template, tab_geracao, tab_visao = st.tabs(["📅 Semana", "📋 Template", "🤖 Geração Automática", "🗓️ 4 Semanas"])
@@ -185,6 +246,7 @@ with tab_semana:
 
     week_start: date = st.session_state["escala_week_start"]
     week_end   = week_start + timedelta(days=6)
+    week_label = f"{week_start.strftime('%d/%m/%Y')} – {week_end.strftime('%d/%m/%Y')}"
 
     col_prev, col_lbl, col_next = st.columns([1, 5, 1])
     with col_prev:
@@ -193,9 +255,7 @@ with tab_semana:
             st.rerun()
     with col_lbl:
         st.markdown(
-            f"<h3 style='text-align:center;margin:0;padding:4px'>"
-            f"{week_start.strftime('%d/%m/%Y')} – {week_end.strftime('%d/%m/%Y')}"
-            f"</h3>",
+            f"<h3 style='text-align:center;margin:0;padding:4px'>{week_label}</h3>",
             unsafe_allow_html=True,
         )
     with col_next:
@@ -206,7 +266,6 @@ with tab_semana:
     dates    = [week_start + timedelta(days=i) for i in range(7)]
     col_hdrs = [f"{DIAS_PT[i]}\n{d.strftime('%d/%m')}" for i, d in enumerate(dates)]
 
-    # Carrega escala do banco para a semana
     with db_cursor() as (_, cur):
         cur.execute("""
             SELECT employee, work_date, start_time, end_time, is_day_off
@@ -222,7 +281,6 @@ with tab_semana:
         index=emp_names,
     )
 
-    # Botão preencher do template
     col_btn_tmpl, _ = st.columns([2, 5])
     with col_btn_tmpl:
         if st.button("📋 Preencher do Template", key="fill_from_tmpl"):
@@ -256,7 +314,6 @@ with tab_semana:
             time_module.sleep(1.5)
             st.rerun()
 
-    # Legenda de carga por funcionário
     with st.expander("ℹ️ Carga horária por funcionário", expanded=False):
         rows_leg = []
         for name in emp_names:
@@ -286,7 +343,6 @@ with tab_semana:
         _parts.append(f"{_day} :{_clr}[**{_n}**]")
     st.caption("👥 Presentes — " + "  ·  ".join(_parts))
 
-    # Validação em tempo real
     warnings = validate_grid(edited, col_hdrs, emp_shift)
     if warnings:
         with st.expander(f"⚠️ {len(warnings)} aviso(s) de cobertura", expanded=True):
@@ -295,8 +351,9 @@ with tab_semana:
     else:
         st.success("✅ Cobertura completa para a semana.")
 
-    st.markdown("")
-    if st.button("💾 Salvar Escala", type="primary", use_container_width=True, key="save_week"):
+    # Executa salvar após confirmação no popup
+    if st.session_state.get("_confirm_action") == "save_week":
+        del st.session_state["_confirm_action"]
         errs = []
         count = 0
         with db_cursor() as (conn, cur):
@@ -336,33 +393,30 @@ with tab_semana:
             time_module.sleep(1.5)
             st.rerun()
 
-    # ── Exclusão da semana ────────────────────────────────────────────────────
-    with st.expander("🗑️ Excluir escala desta semana", expanded=False):
-        st.warning(
-            f"Remove **todos** os registros de escala da semana "
-            f"**{week_start.strftime('%d/%m/%Y')} – {week_end.strftime('%d/%m/%Y')}** para todos os funcionários."
-        )
-        col_del, col_conf = st.columns([2, 1])
-        with col_del:
-            confirmar_del = st.text_input(
-                "Digite **CONFIRMAR** para liberar o botão", key="confirm_del_week", placeholder="CONFIRMAR"
+    # Executa exclusão após confirmação no popup
+    if st.session_state.get("_confirm_action") == "delete_week":
+        del st.session_state["_confirm_action"]
+        with db_cursor() as (conn, cur):
+            cur.execute(
+                "DELETE FROM schedule WHERE company=%s AND work_date BETWEEN %s AND %s",
+                (company_id, week_start, week_end),
             )
-        with col_conf:
-            st.markdown("<br>", unsafe_allow_html=True)
-            if st.button("🗑️ Excluir semana", type="secondary", use_container_width=True,
-                         key="btn_del_week", disabled=(confirmar_del.strip().upper() != "CONFIRMAR")):
-                with db_cursor() as (conn, cur):
-                    cur.execute(
-                        "DELETE FROM schedule WHERE company=%s AND work_date BETWEEN %s AND %s",
-                        (company_id, week_start, week_end),
-                    )
-                    deleted = cur.rowcount
-                st.success(f"{deleted} registros excluídos.")
-                _wk_key = f"week_editor_{week_start}"
-                if _wk_key in st.session_state:
-                    del st.session_state[_wk_key]
-                time_module.sleep(1.5)
-                st.rerun()
+            deleted = cur.rowcount
+        st.success(f"{deleted} registros excluídos.")
+        _wk_key = f"week_editor_{week_start}"
+        if _wk_key in st.session_state:
+            del st.session_state[_wk_key]
+        time_module.sleep(1.5)
+        st.rerun()
+
+    st.markdown("")
+    col_sv, col_del = st.columns([3, 1])
+    with col_sv:
+        if st.button("💾 Salvar Escala", type="primary", use_container_width=True, key="save_week"):
+            dlg_salvar_semana(week_label)
+    with col_del:
+        if st.button("🗑️ Excluir semana", use_container_width=True, key="btn_del_week"):
+            dlg_excluir_semana(week_label)
 
 
 # ─── TAB: TEMPLATE ────────────────────────────────────────────────────────────
@@ -405,8 +459,9 @@ with tab_template:
     else:
         st.success("✅ Cobertura completa no template.")
 
-    st.markdown("")
-    if st.button("💾 Salvar Template", type="primary", use_container_width=True, key="save_tmpl"):
+    # Executa salvar template após confirmação no popup
+    if st.session_state.get("_confirm_action") == "save_template":
+        del st.session_state["_confirm_action"]
         errs = []
         count = 0
         with db_cursor() as (conn, cur):
@@ -446,6 +501,10 @@ with tab_template:
             time_module.sleep(1.5)
             st.rerun()
 
+    st.markdown("")
+    if st.button("💾 Salvar Template", type="primary", use_container_width=True, key="save_tmpl"):
+        dlg_salvar_template()
+
 
 # ─── TAB: GERAÇÃO AUTOMÁTICA ──────────────────────────────────────────────────
 with tab_geracao:
@@ -456,7 +515,6 @@ with tab_geracao:
         "(a cada 3 domingos: trabalha, trabalha, folga)."
     )
 
-    # ── Detecta data de início ────────────────────────────────────────────────
     with db_cursor() as (_, cur):
         cur.execute("SELECT MAX(work_date) AS last_date FROM schedule WHERE company = %s", (company_id,))
         row_last = cur.fetchone()
@@ -465,7 +523,7 @@ with tab_geracao:
 
     if last_scheduled:
         raw_next = last_scheduled + timedelta(days=1)
-        auto_start = raw_next - timedelta(days=raw_next.weekday())  # ajusta para segunda
+        auto_start = raw_next - timedelta(days=raw_next.weekday())
         st.info(f"Escala existente até **{last_scheduled.strftime('%d/%m/%Y')}**. Início sugerido: **{auto_start.strftime('%d/%m/%Y')}**.")
     else:
         auto_start = today_ref + timedelta(days=(7 - today_ref.weekday()) % 7 or 7)
@@ -482,10 +540,8 @@ with tab_geracao:
     with col_c:
         folga_sabado = st.checkbox("Dar sábado de folga junto com domingo de rotação", value=True, key="gen_sat")
 
-    # ── Rotação: último domingo de folga por funcionário ──────────────────────
     st.markdown("---")
 
-    # Auto-detecção: último domingo com is_day_off=TRUE no banco
     with db_cursor() as (_, cur):
         cur.execute("""
             SELECT employee, MAX(work_date) AS last_off_sunday
@@ -521,7 +577,6 @@ with tab_geracao:
             key="rotation_editor",
         )
 
-    # ── Gerar ────────────────────────────────────────────────────────────────
     st.markdown("")
     if st.button("⚡ Gerar Escala", type="primary", use_container_width=True, key="btn_gerar"):
         with db_cursor() as (_, cur):
@@ -537,34 +592,25 @@ with tab_geracao:
 
         tmpl_map = {(r["employee"], r["day_of_week"]): r for r in tmpl_rows}
 
-        # Coleta último domingo de folga editado pelo usuário
         last_sunday_off: dict[int, date | None] = {}
         for name, eid in zip(emp_names, emp_ids):
             val = edited_rotation.at[name, "Último domingo de folga de rotação"]
             last_sunday_off[eid] = val if val and not pd.isna(val) else None
 
-        # Para funcionários sem histórico de folga: usa o domingo anterior ao início
-        # → trabalha 2 domingos, depois folga (ciclo começa em posição 1)
-        default_ref = gen_start_adj - timedelta(days=1)  # domingo imediatamente antes
+        default_ref = gen_start_adj - timedelta(days=1)
         for eid in emp_ids:
             if last_sunday_off[eid] is None:
                 last_sunday_off[eid] = default_ref
 
-        # Folgas regulares vêm direto do template (is_day_off=TRUE)
         emp_days_off: dict[int, set] = {
             eid: {dow for dow in range(7) if tmpl_map.get((eid, dow), {}).get("is_day_off")}
             for eid in emp_ids
         }
 
-        # ── Geração semana a semana ───────────────────────────────────────────
-        # Regra de domingo: semanas_desde_ultima_folga % 3 == 0 → folga de rotação
-        # Após semana de rotação (Sáb+Dom off): semana seguinte folga Seg+Ter
         generated: dict[tuple, dict] = {}
-        lso = dict(last_sunday_off)  # cópia mutável por funcionário
+        lso = dict(last_sunday_off)
 
-        # Verifica se o domingo imediatamente antes do início foi rotação
-        # (para que a primeira semana gerada já receba Seg+Ter de folga se necessário)
-        sunday_before = gen_start_adj - timedelta(days=1)  # domingo anterior
+        sunday_before = gen_start_adj - timedelta(days=1)
         with db_cursor() as (_, cur):
             cur.execute("""
                 SELECT employee FROM schedule
@@ -588,7 +634,6 @@ with tab_geracao:
                     lso[eid] = sunday
                     rotation_this_week.add(eid)
                 elif eid in post_rotation:
-                    # Semana seguinte à rotação: folga Seg+Ter
                     days_off_wk = {0, 1}
                 else:
                     days_off_wk = emp_days_off.get(eid, set())
@@ -611,7 +656,7 @@ with tab_geracao:
                             "reason": None,
                         }
 
-            post_rotation = rotation_this_week  # próxima semana sabe quem veio de rotação
+            post_rotation = rotation_this_week
 
         st.session_state["gen_result"]    = generated
         st.session_state["gen_start_adj"] = gen_start_adj
@@ -620,9 +665,9 @@ with tab_geracao:
 
     # ── Prévia ────────────────────────────────────────────────────────────────
     if "gen_result" in st.session_state:
-        generated     = st.session_state["gen_result"]
-        g_start       = st.session_state["gen_start_adj"]
-        g_weeks       = st.session_state["gen_num_weeks"]
+        generated = st.session_state["gen_result"]
+        g_start   = st.session_state["gen_start_adj"]
+        g_weeks   = st.session_state["gen_num_weeks"]
 
         st.markdown("---")
         st.subheader("Prévia da Escala Gerada")
@@ -632,7 +677,7 @@ with tab_geracao:
         )
 
         total_warnings = 0
-        edited_weeks: dict[int, tuple[pd.DataFrame, list, list]] = {}  # w → (df_edited, wk_hdrs, wk_dates)
+        edited_weeks: dict[int, tuple[pd.DataFrame, list, list]] = {}
 
         for w in range(g_weeks):
             wk_start = g_start + timedelta(weeks=w)
@@ -674,7 +719,6 @@ with tab_geracao:
                     _parts_g.append(f"{_day} :{_clr}[**{_n}**]")
                 st.caption("👥 Presentes — " + "  ·  ".join(_parts_g))
 
-                # Validações dinâmicas — recalculadas a cada edição
                 df_val = df_edited.replace("🔄 Folga", "Folga")
                 warns  = validate_grid(df_val, wk_hdrs, emp_shift)
 
@@ -699,61 +743,70 @@ with tab_geracao:
         st.markdown("")
         overwrite = st.checkbox("Substituir registros já existentes no período", value=False, key="gen_overwrite")
 
+        # Executa salvar gerada após confirmação
+        if st.session_state.get("_confirm_action") == "save_generated":
+            del st.session_state["_confirm_action"]
+            saved = 0
+            errs  = []
+            with db_cursor() as (conn, cur):
+                for w, (df_ed, wk_hdrs, wk_dates) in edited_weeks.items():
+                    for name in emp_names:
+                        eid       = emp_by_name[name]
+                        shift_min = emp_shift.get(name, 540)
+                        for h, d in zip(wk_hdrs, wk_dates):
+                            raw  = df_ed.at[name, h]
+                            cell = str(raw).strip() if raw and not pd.isna(raw) else ""
+                            cell_norm = cell.replace("🔄 ", "")
+                            if not cell_norm:
+                                continue
+                            is_off = cell_norm.upper() == "FOLGA"
+                            st_t, _ = parse_cell(cell_norm) if not is_off else (None, True)
+                            if not is_off and st_t is None:
+                                errs.append(f"**{name}** / {h}: formato inválido `{cell}`")
+                                continue
+                            en_t = calc_end(st_t, shift_min) if st_t else None
+                            if overwrite:
+                                cur.execute("""
+                                    INSERT INTO schedule (employee, company, work_date, start_time, end_time, is_day_off, system_user)
+                                    VALUES (%s,%s,%s,%s,%s,%s,%s)
+                                    ON CONFLICT (employee, work_date) DO UPDATE SET
+                                        start_time=EXCLUDED.start_time, end_time=EXCLUDED.end_time,
+                                        is_day_off=EXCLUDED.is_day_off, update_date=NOW(),
+                                        system_user=EXCLUDED.system_user
+                                """, (eid, company_id, d, st_t, en_t, is_off, SYSTEM_USER))
+                            else:
+                                cur.execute("""
+                                    INSERT INTO schedule (employee, company, work_date, start_time, end_time, is_day_off, system_user)
+                                    VALUES (%s,%s,%s,%s,%s,%s,%s)
+                                    ON CONFLICT (employee, work_date) DO NOTHING
+                                """, (eid, company_id, d, st_t, en_t, is_off, SYSTEM_USER))
+                            saved += 1
+            if errs:
+                for e in errs:
+                    st.error(e)
+            else:
+                st.success(f"Escala salva! ({saved} registros)")
+                del st.session_state["gen_result"]
+                for _w in range(g_weeks):
+                    _k = f"gen_editor_w{_w}_{g_start}"
+                    if _k in st.session_state:
+                        del st.session_state[_k]
+                time_module.sleep(1.5)
+                st.rerun()
+
+        # Executa descartar após confirmação
+        if st.session_state.get("_confirm_action") == "discard_generated":
+            del st.session_state["_confirm_action"]
+            del st.session_state["gen_result"]
+            st.rerun()
+
         col_sv, col_disc = st.columns([3, 1])
         with col_sv:
             if st.button("💾 Salvar Escala Gerada", type="primary", use_container_width=True, key="btn_save_gen"):
-                saved = 0
-                errs  = []
-                with db_cursor() as (conn, cur):
-                    for w, (df_ed, wk_hdrs, wk_dates) in edited_weeks.items():
-                        for name in emp_names:
-                            eid       = emp_by_name[name]
-                            shift_min = emp_shift.get(name, 540)
-                            for h, d in zip(wk_hdrs, wk_dates):
-                                raw  = df_ed.at[name, h]
-                                cell = str(raw).strip() if raw and not pd.isna(raw) else ""
-                                # Normaliza marcador de rotação
-                                cell_norm = cell.replace("🔄 ", "")
-                                if not cell_norm:
-                                    continue
-                                is_off = cell_norm.upper() == "FOLGA"
-                                st_t, _ = parse_cell(cell_norm) if not is_off else (None, True)
-                                if not is_off and st_t is None:
-                                    errs.append(f"**{name}** / {h}: formato inválido `{cell}`")
-                                    continue
-                                en_t = calc_end(st_t, shift_min) if st_t else None
-                                if overwrite:
-                                    cur.execute("""
-                                        INSERT INTO schedule (employee, company, work_date, start_time, end_time, is_day_off, system_user)
-                                        VALUES (%s,%s,%s,%s,%s,%s,%s)
-                                        ON CONFLICT (employee, work_date) DO UPDATE SET
-                                            start_time=EXCLUDED.start_time, end_time=EXCLUDED.end_time,
-                                            is_day_off=EXCLUDED.is_day_off, update_date=NOW(),
-                                            system_user=EXCLUDED.system_user
-                                    """, (eid, company_id, d, st_t, en_t, is_off, SYSTEM_USER))
-                                else:
-                                    cur.execute("""
-                                        INSERT INTO schedule (employee, company, work_date, start_time, end_time, is_day_off, system_user)
-                                        VALUES (%s,%s,%s,%s,%s,%s,%s)
-                                        ON CONFLICT (employee, work_date) DO NOTHING
-                                    """, (eid, company_id, d, st_t, en_t, is_off, SYSTEM_USER))
-                                saved += 1
-                if errs:
-                    for e in errs:
-                        st.error(e)
-                else:
-                    st.success(f"Escala salva! ({saved} registros)")
-                    del st.session_state["gen_result"]
-                    for _w in range(g_weeks):
-                        _k = f"gen_editor_w{_w}_{g_start}"
-                        if _k in st.session_state:
-                            del st.session_state[_k]
-                    time_module.sleep(1.5)
-                    st.rerun()
+                dlg_salvar_gerada()
         with col_disc:
             if st.button("🗑️ Descartar", use_container_width=True, key="btn_disc_gen"):
-                del st.session_state["gen_result"]
-                st.rerun()
+                dlg_descartar_gerada()
 
 
 # ─── TAB: 4 SEMANAS ───────────────────────────────────────────────────────────
