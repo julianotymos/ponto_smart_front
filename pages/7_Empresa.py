@@ -32,7 +32,8 @@ with db_cursor() as (_, cur):
     cur.execute("""
         SELECT name, cnpj, company_code, address, house_number, additional_information,
                city, state, zip_code, phone_number, email,
-               latitude, longitude, location_radius
+               latitude, longitude, location_radius,
+               tolerance_early_minutes, tolerance_late_minutes
         FROM company WHERE id = %s
     """, (company_id,))
     empresa = cur.fetchone()
@@ -41,7 +42,7 @@ if not empresa:
     st.error("Empresa não encontrada.")
     st.stop()
 
-aba_dados, aba_localizacao = st.tabs(["📋 Dados Cadastrais", "📍 Localização"])
+aba_dados, aba_localizacao, aba_tolerancia = st.tabs(["📋 Dados Cadastrais", "📍 Localização", "⏱ Tolerância de Ponto"])
 
 # ─── ABA DADOS ───────────────────────────────────────────────
 with aba_dados:
@@ -166,3 +167,53 @@ with aba_localizacao:
                 st.rerun()
             except Exception as ex:
                 st.error(f"Erro: {ex}")
+
+
+# ─── ABA TOLERÂNCIA ──────────────────────────────────────────
+with aba_tolerancia:
+    st.subheader("Janela de tolerância para registro de ponto")
+    st.caption(
+        "Define quantos minutos antes (adiantado) e depois (atrasado) do horário da escala "
+        "o funcionário pode registrar a entrada sem precisar de aprovação do gestor."
+    )
+
+    col_early, col_late = st.columns(2)
+    with col_early:
+        tol_early = st.number_input(
+            "Adiantado (minutos)",
+            min_value=0, max_value=120,
+            value=int(empresa["tolerance_early_minutes"]) if empresa["tolerance_early_minutes"] is not None else 15,
+            step=5, key="tol_early",
+            help="Minutos que o funcionário pode registrar ANTES do horário da escala.",
+        )
+    with col_late:
+        tol_late = st.number_input(
+            "Atrasado (minutos)",
+            min_value=0, max_value=120,
+            value=int(empresa["tolerance_late_minutes"]) if empresa["tolerance_late_minutes"] is not None else 15,
+            step=5, key="tol_late",
+            help="Minutos que o funcionário pode registrar DEPOIS do horário da escala.",
+        )
+
+    st.info(
+        f"Com essa configuração, funcionários podem registrar a entrada entre "
+        f"**{tol_early} min antes** e **{tol_late} min depois** do horário da escala. "
+        f"Fora dessa janela, a solicitação vai para aprovação do gestor."
+    )
+
+    st.markdown("")
+    if st.button("Salvar Tolerância", type="primary", use_container_width=True, key="btn_salvar_tol"):
+        try:
+            with db_cursor() as (_, cur):
+                cur.execute("""
+                    UPDATE company SET
+                        tolerance_early_minutes = %s,
+                        tolerance_late_minutes  = %s,
+                        update_date             = NOW()
+                    WHERE id = %s
+                """, (tol_early, tol_late, company_id))
+            st.success("Tolerância atualizada com sucesso!")
+            time.sleep(2)
+            st.rerun()
+        except Exception as ex:
+            st.error(f"Erro ao salvar: {ex}")

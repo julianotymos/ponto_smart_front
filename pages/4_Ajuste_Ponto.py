@@ -97,31 +97,113 @@ with tab_registros:
     with col_ate:
         data_ate = st.date_input("Ate", value=date.today(), key="reg_ate")
 
-    if data_de > data_ate:
-        st.error("A data inicial nao pode ser maior que a data final.")
-        st.stop()
+    subtab_lista, subtab_add = st.tabs(["Registros do Periodo", "Adicionar Marcacao"])
 
-    with db_cursor() as (_, cur):
-        cur.execute(
-            """
-            SELECT a.id,
-                   a.work_day,
-                   TO_CHAR(a.work_day, 'DD/MM/YYYY')   AS dia,
-                   TO_CHAR(a.check_in_time, 'HH24:MI')  AS entrada,
-                   TO_CHAR(a.check_out_time, 'HH24:MI') AS saida,
-                   CASE a.status WHEN 3 THEN 'Aberto' ELSE 'Fechado' END AS status,
-                   COALESCE(a.observation, '') AS observacao_entrada,
-                   a.check_in_time            AS check_in_raw,
-                   a.check_out_time           AS check_out_raw
-            FROM attendance a
-            WHERE a.employee = %s
-              AND a.work_day BETWEEN %s AND %s
-              AND a.status IN (1, 3)
-            ORDER BY a.work_day DESC, a.check_in_time ASC
-            """,
-            (func_id, data_de, data_ate),
-        )
-        registros = cur.fetchall()
+    with subtab_add:
+        st.subheader("Adicionar Nova Marcacao de Ponto")
+        with st.form("form_nova_marcacao"):
+            col_data, col_entrada, col_saida = st.columns(3)
+            with col_data:
+                data_nova = st.date_input("Data", value=date.today(), key="nova_data")
+            with col_entrada:
+                hora_entrada_nova = st.time_input("Hora de Entrada", value=time(8, 0), key="nova_entrada")
+            with col_saida:
+                hora_saida_nova = st.time_input("Hora de Saida", value=time(17, 0), key="nova_saida")
+
+            col_local_in, col_local_out = st.columns(2)
+            with col_local_in:
+                local_nova = st.text_input("Local de Entrada", key="nova_location", placeholder="Ex: Escritorio, Home Office")
+            with col_local_out:
+                local_out_nova = st.text_input("Local de Saida", key="nova_location_out", placeholder="Ex: Saida no cliente")
+
+            col_obs, col_obs_out, col_checkbox = st.columns([2, 2, 1])
+            with col_obs:
+                obs_nova = st.text_input("Observacao de Entrada", key="nova_obs")
+            with col_obs_out:
+                obs_out_nova = st.text_input("Observacao de Saida", key="nova_obs_out")
+            with col_checkbox:
+                st.markdown("&nbsp;")
+                sem_saida_nova = st.checkbox("Sem saida", key="nova_aberto", label_visibility="visible")
+
+            adicionar = st.form_submit_button("Adicionar Marcacao", type="primary", use_container_width=True)
+
+        if adicionar:
+            check_in_dt_novo = datetime.combine(data_nova, hora_entrada_nova)
+            check_out_dt_novo = None if sem_saida_nova else datetime.combine(data_nova, hora_saida_nova)
+
+            if check_out_dt_novo and check_out_dt_novo < check_in_dt_novo:
+                st.error("Hora de saida nao pode ser anterior a entrada.")
+            else:
+                system_user = st.session_state.get("company_id", 1)
+                now_dt = datetime.now()
+                with db_cursor() as (_, cur):
+                    cur.execute(
+                        """
+                        INSERT INTO attendance (
+                            employee,
+                            work_day,
+                            check_in_time,
+                            check_out_time,
+                            observation,
+                            observation_out,
+                            insert_date,
+                            update_date,
+                            status,
+                            status_date,
+                            system_user,
+                            location,
+                            location_out
+                        )
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        """,
+                        (
+                            func_id,
+                            data_nova,
+                            check_in_dt_novo,
+                            check_out_dt_novo,
+                            obs_nova or None,
+                            obs_out_nova or None,
+                            now_dt,
+                            now_dt,
+                            3 if sem_saida_nova else 1,
+                            now_dt,
+                            system_user,
+                            local_nova or None,
+                            local_out_nova or None,
+                        ),
+                    )
+                st.success("Marcacao de ponto adicionada com sucesso!")
+                st.rerun()
+
+    with subtab_lista:
+        if data_de > data_ate:
+            st.error("A data inicial nao pode ser maior que a data final.")
+            st.stop()
+
+        with db_cursor() as (_, cur):
+            cur.execute(
+                """
+                SELECT a.id,
+                       a.work_day,
+                       TO_CHAR(a.work_day, 'DD/MM/YYYY')   AS dia,
+                       TO_CHAR(a.check_in_time, 'HH24:MI')  AS entrada,
+                       TO_CHAR(a.check_out_time, 'HH24:MI') AS saida,
+                       CASE a.status WHEN 3 THEN 'Aberto' ELSE 'Fechado' END AS status,
+                       COALESCE(a.observation, '') AS observacao_entrada,
+                       COALESCE(a.observation_out, '') AS observacao_saida,
+                       COALESCE(a.location, '') AS local_entrada,
+                       COALESCE(a.location_out, '') AS local_saida,
+                       a.check_in_time            AS check_in_raw,
+                       a.check_out_time           AS check_out_raw
+                FROM attendance a
+                WHERE a.employee = %s
+                  AND a.work_day BETWEEN %s AND %s
+                  AND a.status IN (1, 3)
+                ORDER BY a.work_day DESC, a.check_in_time ASC
+                """,
+                (func_id, data_de, data_ate),
+            )
+            registros = cur.fetchall()
 
     if not registros:
         st.info(f"Nenhum registro encontrado para {func_nome} no periodo selecionado.")
@@ -129,70 +211,126 @@ with tab_registros:
         st.markdown(f"**{len(registros)} registro(s)** entre {data_de.strftime('%d/%m/%Y')} e {data_ate.strftime('%d/%m/%Y')}")
         st.markdown("---")
 
-        dias = {}
-        for reg in registros:
-            if reg["dia"] not in dias:
-                dias[reg["dia"]] = []
-            dias[reg["dia"]].append(reg)
+        df_regs = pd.DataFrame([
+            {
+                "id": reg["id"],
+                "Data": reg["dia"],
+                "Entrada": reg["entrada"],
+                "Saida": reg["saida"] or "Em aberto",
+                "Status": reg["status"],
+                "Local de Entrada": reg["local_entrada"],
+                "Local de Saida": reg["local_saida"],
+                "Observacao": reg["observacao_entrada"],
+            }
+            for reg in registros
+        ])
 
-        for dia, regs in dias.items():
-            st.markdown(f"##### {dia}")
-            for reg in regs:
-                label = f"Entrada: {reg['entrada']}  |  Saida: {reg['saida'] or 'Em aberto'}  |  {reg['status']}"
-                with st.expander(label, expanded=(len(registros) == 1)):
-                    col_edit, col_del = st.columns([4, 1])
-                    with col_edit:
-                        with st.form(f"form_edit_{reg['id']}"):
-                            col_e, col_s = st.columns(2)
-                            with col_e:
-                                hora_entrada = st.time_input(
-                                    "Hora de Entrada",
-                                    value=reg["check_in_raw"].time() if reg["check_in_raw"] else time(8, 0),
-                                    key=f"entrada_{reg['id']}",
-                                )
-                            with col_s:
-                                hora_saida_val = reg["check_out_raw"].time() if reg["check_out_raw"] else None
-                                hora_saida = st.time_input(
-                                    "Hora de Saida",
-                                    value=hora_saida_val or time(17, 0),
-                                    key=f"saida_{reg['id']}",
-                                )
-                                sem_saida = st.checkbox(
-                                    "Manter em aberto",
-                                    value=(hora_saida_val is None),
-                                    key=f"aberto_{reg['id']}",
-                                )
-                            obs = st.text_input("Observacao", value=reg["observacao_entrada"], key=f"obs_{reg['id']}")
-                            salvar = st.form_submit_button("Salvar Alteracoes", type="primary")
+        ev_reg = st.dataframe(
+            df_regs.drop(columns=["id"]),
+            use_container_width=True,
+            hide_index=True,
+            selection_mode="single-row",
+            on_select="rerun",
+            key="sel_registros",
+        )
 
-                        if salvar:
-                            work_day     = reg["check_in_raw"].date()
-                            check_in_dt  = datetime.combine(work_day, hora_entrada)
-                            check_out_dt = None if sem_saida else datetime.combine(work_day, hora_saida)
-                            if check_out_dt and check_out_dt < check_in_dt:
-                                st.error("Hora de saida nao pode ser anterior a entrada.")
-                            else:
-                                with db_cursor() as (_, cur):
-                                    cur.execute(
-                                        """
-                                        UPDATE attendance SET
-                                            check_in_time = %s, check_out_time = %s,
-                                            status = %s, observation = %s, update_date = NOW()
-                                        WHERE id = %s AND employee = %s
-                                        """,
-                                        (check_in_dt, check_out_dt, 3 if sem_saida else 1,
-                                         obs or None, reg["id"], func_id),
-                                    )
-                                st.success("Registro atualizado.")
-                                st.rerun()
+        sel = ev_reg.selection.rows
+        if not sel:
+            st.info("Clique em um registro para abrir a opcao de edicao.")
+        else:
+            reg = registros[sel[0]]
+            st.markdown("---")
+            st.subheader("Editar Registro Selecionado")
+            with st.expander(f"Editar registro de {reg['dia']} - Entrada {reg['entrada']}", expanded=True):
+                with st.form(f"form_edit_{reg['id']}"):
+                    col_e, col_s = st.columns(2)
+                    with col_e:
+                        hora_entrada = st.time_input(
+                            "Hora de Entrada",
+                            value=reg["check_in_raw"].time() if reg["check_in_raw"] else time(8, 0),
+                            key=f"entrada_{reg['id']}",
+                        )
+                        local_entrada = st.text_input(
+                            "Local de Entrada",
+                            value=reg["local_entrada"],
+                            key=f"local_entrada_{reg['id']}",
+                            placeholder="Ex: Escritorio, Home Office, Campo",
+                        )
+                    with col_s:
+                        hora_saida_val = reg["check_out_raw"].time() if reg["check_out_raw"] else None
+                        hora_saida = st.time_input(
+                            "Hora de Saida",
+                            value=hora_saida_val or time(17, 0),
+                            key=f"saida_{reg['id']}",
+                        )
+                        sem_saida = st.checkbox(
+                            "Manter em aberto",
+                            value=(hora_saida_val is None),
+                            key=f"aberto_{reg['id']}",
+                        )
+                        local_saida = st.text_input(
+                            "Local de Saida",
+                            value=reg["local_saida"],
+                            key=f"local_saida_{reg['id']}",
+                            placeholder="Ex: Escritorio, Home Office, Campo",
+                            disabled=sem_saida,
+                        )
+                    obs = st.text_input("Observacao de Entrada", value=reg["observacao_entrada"], key=f"obs_{reg['id']}")
+                    obs_out = st.text_input("Observacao de Saida", value=reg["observacao_saida"], key=f"obs_out_{reg['id']}")
+                    col_save, col_delete = st.columns([3, 1])
+                    with col_save:
+                        salvar = st.form_submit_button("Salvar Alteracoes", type="primary")
+                    with col_delete:
+                        excluir = st.form_submit_button("Excluir Registro", type="secondary")
 
-                    with col_del:
-                        st.markdown("&nbsp;")
-                        if st.button("Excluir", key=f"del_{reg['id']}", type="secondary", use_container_width=True):
-                            with db_cursor() as (_, cur):
-                                cur.execute("DELETE FROM attendance WHERE id = %s AND employee = %s", (reg["id"], func_id))
-                            st.success("Registro excluido.")
-                            st.rerun()
+                if salvar:
+                    work_day = reg["check_in_raw"].date()
+                    check_in_dt = datetime.combine(work_day, hora_entrada)
+                    check_out_dt = None if sem_saida else datetime.combine(work_day, hora_saida)
+                    if check_out_dt and check_out_dt < check_in_dt:
+                        st.error("Hora de saida nao pode ser anterior a entrada.")
+                    else:
+                        system_user = st.session_state.get("company_id", 1)
+                        now_dt = datetime.now()
+                        with db_cursor() as (_, cur):
+                            cur.execute(
+                                """
+                                UPDATE attendance SET
+                                    check_in_time = %s,
+                                    check_out_time = %s,
+                                    location = %s,
+                                    location_out = %s,
+                                    status = %s,
+                                    observation = %s,
+                                    observation_out = %s,
+                                    update_date = %s,
+                                    status_date = %s,
+                                    system_user = %s
+                                WHERE id = %s AND employee = %s
+                                """,
+                                (
+                                    check_in_dt,
+                                    check_out_dt,
+                                    local_entrada or None,
+                                    check_out_dt and local_saida or None,
+                                    3 if sem_saida else 1,
+                                    obs or None,
+                                    obs_out or None,
+                                    now_dt,
+                                    now_dt,
+                                    system_user,
+                                    reg["id"],
+                                    func_id,
+                                ),
+                            )
+                        st.success("Registro atualizado.")
+                        st.rerun()
+
+                if excluir:
+                    with db_cursor() as (_, cur):
+                        cur.execute("DELETE FROM attendance WHERE id = %s AND employee = %s", (reg["id"], func_id))
+                    st.success("Registro excluido.")
+                    st.rerun()
             st.markdown("---")
 
 
@@ -279,6 +417,8 @@ with tab_alertas:
                    TO_CHAR(a.check_out_time, 'HH24:MI') AS saida,
                    CASE a.status WHEN 3 THEN 'Aberto' ELSE 'Fechado' END AS status,
                    COALESCE(a.observation, '') AS observacao_entrada,
+                   COALESCE(a.location, '') AS local_entrada,
+                   COALESCE(a.location_out, '') AS local_saida,
                    a.check_in_time            AS check_in_raw,
                    a.check_out_time           AS check_out_raw
             FROM attendance a
@@ -290,7 +430,7 @@ with tab_alertas:
         regs_alerta = cur.fetchall()
 
     for reg in regs_alerta:
-        label = f"Entrada: {reg['entrada']}  |  Saida: {reg['saida'] or 'Em aberto'}  |  {reg['status']}"
+        label = f"Entrada: {reg['entrada']}  |  Local: {reg['local_entrada']}  |  Saida: {reg['saida'] or 'Em aberto'}  |  {reg['status']}"
         with st.expander(label, expanded=True):
             col_edit, col_del = st.columns([4, 1])
             with col_edit:
@@ -301,6 +441,12 @@ with tab_alertas:
                             "Hora de Entrada",
                             value=reg["check_in_raw"].time() if reg["check_in_raw"] else time(8, 0),
                             key=f"a_entrada_{reg['id']}",
+                        )
+                        local_entrada = st.text_input(
+                            "Local de Entrada",
+                            value=reg["local_entrada"],
+                            key=f"a_local_entrada_{reg['id']}",
+                            placeholder="Ex: Escritorio, Home Office, Campo"
                         )
                     with col_s:
                         hora_saida_val = reg["check_out_raw"].time() if reg["check_out_raw"] else None
@@ -313,6 +459,13 @@ with tab_alertas:
                             "Manter em aberto",
                             value=(hora_saida_val is None),
                             key=f"a_aberto_{reg['id']}",
+                        )
+                        local_saida = st.text_input(
+                            "Local de Saida",
+                            value=reg["local_saida"],
+                            key=f"a_local_saida_{reg['id']}",
+                            placeholder="Ex: Escritorio, Home Office, Campo" if not sem_saida else "",
+                            disabled=sem_saida
                         )
                     obs = st.text_input("Observacao", value=reg["observacao_entrada"], key=f"a_obs_{reg['id']}")
                     salvar = st.form_submit_button("Salvar Alteracoes", type="primary")
@@ -328,11 +481,12 @@ with tab_alertas:
                                 """
                                 UPDATE attendance SET
                                     check_in_time = %s, check_out_time = %s,
+                                    location = %s, location_out = %s,
                                     status = %s, observation = %s, update_date = NOW()
                                 WHERE id = %s AND employee = %s
                                 """,
-                                (check_in_dt, check_out_dt, 3 if sem_saida else 1,
-                                 obs or None, reg["id"], alerta_emp_id),
+                                (check_in_dt, check_out_dt, local_entrada or None, check_out_dt and local_saida or None,
+                                 3 if sem_saida else 1, obs or None, reg["id"], alerta_emp_id),
                             )
                         st.success("Registro atualizado.")
                         st.rerun()
