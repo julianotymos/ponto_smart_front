@@ -73,7 +73,15 @@ with col_form:
         revoke_token_endpoint="https://oauth2.googleapis.com/revoke",
     )
 
-    redirect_uri = st.secrets["google"]["redirect_uri"]
+    try:
+        host = st.context.headers.get("host", "")
+        redirect_uri = (
+            "https://pontosmartadm.streamlit.app/"
+            if "streamlit.app" in host
+            else "http://localhost:8501/"
+        )
+    except Exception:
+        redirect_uri = "http://localhost:8501/"
 
     try:
         result = oauth2.authorize_button(
