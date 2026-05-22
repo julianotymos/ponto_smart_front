@@ -1,6 +1,7 @@
 import streamlit as st
 import requests
 from streamlit_oauth import OAuth2Component
+from streamlit_cookies_controller import CookieController
 from utils.db import db_cursor
 
 st.set_page_config(
@@ -20,7 +21,7 @@ header[data-testid="stHeader"] { height: 2.5rem !important; min-height: 2.5rem !
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown("# Ponto Smart\n##### Sistema de Gestao de Ponto Eletronico\n---")
+cookies = CookieController()
 
 def login_empresa(email: str) -> bool:
     with db_cursor() as (_, cur):
@@ -33,8 +34,23 @@ def login_empresa(email: str) -> bool:
         st.session_state["company_email"] = email
         st.session_state["company_id"]    = company["id"]
         st.session_state["company_name"]  = company["name"]
+        cookies.set("ps_email",   email,             max_age=7 * 24 * 3600)
+        cookies.set("ps_id",      str(company["id"]), max_age=7 * 24 * 3600)
+        cookies.set("ps_name",    company["name"],    max_age=7 * 24 * 3600)
         return True
     return False
+
+# Restaura sessão do cookie se ainda não estiver logado
+if "company_name" not in st.session_state:
+    saved_email = cookies.get("ps_email")
+    saved_id    = cookies.get("ps_id")
+    saved_name  = cookies.get("ps_name")
+    if saved_email and saved_id and saved_name:
+        st.session_state["company_email"] = saved_email
+        st.session_state["company_id"]    = int(saved_id)
+        st.session_state["company_name"]  = saved_name
+
+st.markdown("# Ponto Smart\n##### Sistema de Gestao de Ponto Eletronico\n---")
 
 # Se já está logado, mostra info e sai
 if "company_name" in st.session_state:
@@ -57,14 +73,23 @@ with col_form:
         revoke_token_endpoint="https://oauth2.googleapis.com/revoke",
     )
 
-    result = oauth2.authorize_button(
-        name="Entrar com Google",
-        redirect_uri=st.secrets["google"]["redirect_uri"],
-        scope="openid email profile",
-        icon="https://www.google.com/favicon.ico",
-        use_container_width=True,
-        key="google_login",
-    )
+    host = st.context.headers.get("host", "localhost")
+    redirect_uri = "http://localhost:8501/" if "localhost" in host else "https://pontosmartadm.streamlit.app/"
+
+    try:
+        result = oauth2.authorize_button(
+            name="Entrar com Google",
+            redirect_uri=redirect_uri,
+            scope="openid email profile",
+            icon="https://www.google.com/favicon.ico",
+            use_container_width=True,
+            key="google_login",
+        )
+    except Exception as e:
+        if "STATE" in str(e).upper():
+            st.query_params.clear()
+            st.rerun()
+        raise e
 
     if result and "token" in result:
         token = result["token"].get("access_token")
