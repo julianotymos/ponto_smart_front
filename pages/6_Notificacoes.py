@@ -19,10 +19,7 @@ SYSTEM_USER = 1
 CATEGORIAS = {"Geral — todos os funcionários": "GENERAL", "Específica — funcionários selecionados": "SPECIFIC"}
 
 
-def require_login():
-    if "company_email" not in st.session_state:
-        st.warning("Acesse a página inicial e informe o email da empresa.")
-        st.stop()
+from utils.auth import require_login
 
 
 require_login()

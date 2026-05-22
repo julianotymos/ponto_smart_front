@@ -23,10 +23,7 @@ ESTADOS_BR = [
 JORNADAS = ["5x2", "6x1", "12x36", "4x2", "Livre"]
 
 
-def require_login():
-    if "company_email" not in st.session_state:
-        st.warning("Acesse a pagina inicial e informe o email da empresa.")
-        st.stop()
+from utils.auth import require_login
 
 
 def idx(lista, valor):

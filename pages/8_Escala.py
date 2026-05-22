@@ -27,10 +27,7 @@ STORE_CLOSE = {0: Time(21, 0), 1: Time(21, 0), 2: Time(21, 0),
 MIDDAY_CHECK = Time(14, 0)
 
 
-def require_login():
-    if "company_email" not in st.session_state:
-        st.warning("Acesse a página inicial e informe o email da empresa.")
-        st.stop()
+from utils.auth import require_login
 
 
 def parse_cell(cell):

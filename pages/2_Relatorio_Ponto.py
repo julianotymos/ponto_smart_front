@@ -16,10 +16,7 @@ header[data-testid="stHeader"] { height: 2.5rem !important; min-height: 2.5rem !
 """, unsafe_allow_html=True)
 
 
-def require_login():
-    if "company_email" not in st.session_state:
-        st.warning("Acesse a pagina inicial e informe o email da empresa.")
-        st.stop()
+from utils.auth import require_login
 
 
 require_login()

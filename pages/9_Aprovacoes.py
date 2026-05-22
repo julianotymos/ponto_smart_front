@@ -15,10 +15,7 @@ header[data-testid="stHeader"] { height: 2.5rem !important; min-height: 2.5rem !
 
 SYSTEM_USER = 1
 
-def require_login():
-    if "company_email" not in st.session_state:
-        st.warning("Acesse a página inicial e informe o email da empresa.")
-        st.stop()
+from utils.auth import require_login
 
 require_login()
 company_id = st.session_state["company_id"]
