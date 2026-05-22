@@ -40,6 +40,7 @@ with aba_pendentes:
         cur.execute("""
             SELECT
                 apr.id,
+                apr.employee,
                 e.first_name || ' ' || e.last_name AS employee_name,
                 apr.work_date,
                 apr.requested_at,
@@ -104,8 +105,26 @@ with aba_pendentes:
                                         reviewed_at = NOW()
                                     WHERE id = %s AND status = 'pending'
                                 """, (manager_note or None, SYSTEM_USER, row["id"]))
+                                cur.execute("""
+                                    INSERT INTO attendance (
+                                        employee, work_day, check_in_time, check_out_time,
+                                        observation, insert_date, update_date, status, status_date,
+                                        system_user, location
+                                    ) VALUES (
+                                        %s, %s, %s, NULL,
+                                        %s, NOW(), NOW(), 3, NOW(),
+                                        %s, %s
+                                    )
+                                """, (
+                                    row["employee"],
+                                    row["requested_at"].date(),
+                                    row["requested_at"],
+                                    row["observation"],
+                                    SYSTEM_USER,
+                                    row["location"],
+                                ))
                                 conn.commit()
-                            st.success(f"Aprovado.")
+                            st.success(f"Aprovado. Ponto registrado automaticamente.")
                             st.rerun()
 
                     with col_rej:
