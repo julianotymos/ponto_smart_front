@@ -52,7 +52,6 @@ if "company_name" not in st.session_state:
 
 st.markdown("# Ponto Smart\n##### Sistema de Gestao de Ponto Eletronico\n---")
 
-# Se já está logado, mostra info e sai
 if "company_name" in st.session_state:
     st.info(f"Empresa ativa: **{st.session_state['company_name']}** ({st.session_state['company_email']})")
     st.markdown("Use o menu lateral esquerdo para navegar entre as secoes.")
@@ -63,7 +62,6 @@ col_form, col_info = st.columns([1, 2])
 with col_form:
     st.markdown("### Acesso")
 
-    # ── Login com Google ──────────────────────────────────
     oauth2 = OAuth2Component(
         client_id=st.secrets["google"]["client_id"],
         client_secret=st.secrets["google"]["client_secret"],
@@ -105,7 +103,6 @@ with col_form:
 
     st.markdown("<div style='text-align:center;color:#aaa;font-size:12px;margin:8px 0'>ou</div>", unsafe_allow_html=True)
 
-    # ── Login por email manual ────────────────────────────
     with st.expander("Entrar com email"):
         email_input = st.text_input(
             "Email da empresa",
