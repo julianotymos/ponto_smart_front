@@ -34,11 +34,16 @@ def login_empresa(email: str) -> bool:
         st.session_state["company_email"] = email
         st.session_state["company_id"]    = company["id"]
         st.session_state["company_name"]  = company["name"]
-        cookies.set("ps_email",   email,             max_age=7 * 24 * 3600)
-        cookies.set("ps_id",      str(company["id"]), max_age=7 * 24 * 3600)
-        cookies.set("ps_name",    company["name"],    max_age=7 * 24 * 3600)
+        st.session_state["_save_cookies"] = True
         return True
     return False
+
+# Grava cookies no render APÓS o login (sem rerun imediato, evita race condition)
+if st.session_state.get("_save_cookies"):
+    st.session_state["_save_cookies"] = False
+    cookies.set("ps_email", st.session_state["company_email"], max_age=7 * 24 * 3600)
+    cookies.set("ps_id",    str(st.session_state["company_id"]), max_age=7 * 24 * 3600)
+    cookies.set("ps_name",  st.session_state["company_name"],    max_age=7 * 24 * 3600)
 
 # Restaura sessão do cookie se ainda não estiver logado
 if "company_name" not in st.session_state:
