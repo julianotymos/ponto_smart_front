@@ -67,6 +67,9 @@ col_form, col_info = st.columns([1, 2])
 with col_form:
     st.markdown("### Acesso")
 
+    if "login_error" in st.session_state:
+        st.error(st.session_state.pop("login_error"))
+
     oauth2 = OAuth2Component(
         client_id=st.secrets["google"]["client_id"],
         client_secret=st.secrets["google"]["client_secret"],
@@ -104,7 +107,9 @@ with col_form:
             if login_empresa(email):
                 st.rerun()
             else:
-                st.error(f"Nenhuma empresa encontrada para o email **{email}**.")
+                st.session_state["login_error"] = f"Nenhuma empresa encontrada para o email **{email}**."
+                st.query_params.clear()
+                st.rerun()
 
     st.markdown("<div style='text-align:center;color:#aaa;font-size:12px;margin:8px 0'>ou</div>", unsafe_allow_html=True)
 
