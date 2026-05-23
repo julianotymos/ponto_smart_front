@@ -1,6 +1,15 @@
 import streamlit as st
 from utils.db import db_cursor
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
+
+BRT = timezone(timedelta(hours=-3))
+
+def to_brt(dt):
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(BRT)
 
 st.set_page_config(page_title="Aprovações - Ponto Smart", layout="wide")
 st.markdown("""
@@ -63,7 +72,7 @@ with aba_pendentes:
             minutes = abs(row["minutes_diff"])
             direction = "atrasado(a)" if row["minutes_diff"] > 0 else "adiantado(a)"
             schedule_str = row["schedule_start_time"].strftime("%H:%M") if row["schedule_start_time"] else "-"
-            requested_str = row["requested_at"].strftime("%H:%M") if row["requested_at"] else "-"
+            requested_str = to_brt(row["requested_at"]).strftime("%H:%M") if row["requested_at"] else "-"
             date_str = row["work_date"].strftime("%d/%m/%Y") if row["work_date"] else "-"
 
             with st.container(border=True):
@@ -217,7 +226,7 @@ with aba_historico:
             minutes   = abs(row["minutes_diff"])
             direction = "atrasado(a)" if row["minutes_diff"] > 0 else "adiantado(a)"
             schedule_str  = row["schedule_start_time"].strftime("%H:%M") if row["schedule_start_time"] else "-"
-            requested_str = row["requested_at"].strftime("%H:%M") if row["requested_at"] else "-"
+            requested_str = to_brt(row["requested_at"]).strftime("%H:%M") if row["requested_at"] else "-"
             date_str      = row["work_date"].strftime("%d/%m/%Y") if row["work_date"] else "-"
             label, color  = STATUS_LABEL.get(row["status"], (row["status"], "gray"))
 
