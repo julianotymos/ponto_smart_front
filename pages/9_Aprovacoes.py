@@ -124,7 +124,7 @@ with aba_pendentes:
                                 """, (
                                     row["employee"],
                                     to_brt(row["requested_at"]).date(),
-                                    to_brt(row["requested_at"]),
+                                    to_brt(row["requested_at"]).replace(tzinfo=None),
                                     row["observation"],
                                     SYSTEM_USER,
                                     row["location"],
