@@ -123,8 +123,8 @@ with aba_pendentes:
                                     )
                                 """, (
                                     row["employee"],
-                                    row["requested_at"].date(),
-                                    row["requested_at"],
+                                    to_brt(row["requested_at"]).date(),
+                                    to_brt(row["requested_at"]),
                                     row["observation"],
                                     SYSTEM_USER,
                                     row["location"],
