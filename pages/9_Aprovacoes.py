@@ -125,7 +125,7 @@ with aba_pendentes:
                                     row["employee"],
                                     to_brt(row["requested_at"]).date(),
                                     to_brt(row["requested_at"]).replace(tzinfo=None),
-                                    row["observation"],
+                                    (row["observation"] or "")[:100] or None,
                                     SYSTEM_USER,
                                     row["location"],
                                 ))
