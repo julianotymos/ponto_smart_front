@@ -18,7 +18,6 @@ st.markdown("""
 .block-container { padding-top: 1rem !important; }
 h1 { margin-bottom: 0 !important; }
 hr { margin-top: 0.5rem !important; margin-bottom: 0.5rem !important; }
-header[data-testid="stHeader"] { height: 2.5rem !important; min-height: 2.5rem !important; overflow: visible !important; }
 </style>
 """, unsafe_allow_html=True)
 
