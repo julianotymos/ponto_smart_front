@@ -3,6 +3,10 @@ from streamlit_cookies_controller import CookieController
 
 
 def require_login():
+    st.markdown(
+        "<style>[data-testid='stSidebarCollapsedControl'] { display: flex !important; }</style>",
+        unsafe_allow_html=True,
+    )
     if "company_name" not in st.session_state:
         try:
             cookies = CookieController()
