@@ -62,9 +62,7 @@ if "company_name" not in st.session_state:
 st.markdown("# Ponto Smart\n##### Sistema de Gestao de Ponto Eletronico\n---")
 
 if "company_name" in st.session_state:
-    st.info(f"Empresa ativa: **{st.session_state['company_name']}** ({st.session_state['company_email']})")
-    st.markdown("Use o menu lateral esquerdo para navegar entre as secoes.")
-    st.stop()
+    st.switch_page("pages/1_Dashboard.py")
 
 col_form, col_info = st.columns([1, 2])
 
