@@ -3,7 +3,7 @@ import pandas as pd
 from utils.db import db_cursor
 from datetime import date, datetime, time, timedelta
 
-st.set_page_config(page_title="Ajuste de Ponto - Ponto Smart", layout="wide")
+st.set_page_config(page_title="Ajuste de Ponto - Ponto Smart", layout="wide", initial_sidebar_state="expanded")
 st.markdown("""
 <style>
 [data-testid="stStatusWidget"] { display: none !important; }
@@ -11,7 +11,7 @@ st.markdown("""
 h1 { margin-bottom: 0 !important; }
 h2, h3 { margin-top: 0 !important; margin-bottom: 0.5rem !important; }
 hr { margin-top: 0.5rem !important; margin-bottom: 0.5rem !important; }
-header[data-testid="stHeader"] { height: 2.5rem !important; min-height: 2.5rem !important; }
+header[data-testid="stHeader"] { height: 2.5rem !important; min-height: 2.5rem !important; overflow: visible !important; }
 </style>
 """, unsafe_allow_html=True)
 
