@@ -41,7 +41,7 @@ company_id = st.session_state.get("company_id")
 st.title("Funcionarios")
 st.markdown("---")
 
-tab_novo, tab_editar = st.tabs(["Novo Funcionario", "Editar Funcionario"])
+tab_editar, tab_novo = st.tabs(["Editar Funcionario", "Novo Funcionario"])
 
 
 # =============================================================================

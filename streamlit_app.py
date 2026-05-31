@@ -13,6 +13,8 @@ st.set_page_config(
 st.markdown("""
 <style>
 [data-testid="stStatusWidget"] { display: none !important; }
+#MainMenu { display: none !important; }
+[data-testid="stToolbar"] { display: none !important; }
 .block-container { padding-top: 1rem !important; }
 h1 { margin-bottom: 0 !important; }
 h2, h3 { margin-top: 0 !important; margin-bottom: 0.5rem !important; }

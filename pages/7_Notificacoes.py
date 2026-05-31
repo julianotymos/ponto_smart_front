@@ -29,7 +29,7 @@ company_id = st.session_state["company_id"]
 st.title("📣 Notificações")
 st.markdown("---")
 
-aba_cadastro, aba_lista = st.tabs(["➕ Nova Notificação", "📋 Notificações Cadastradas"])
+aba_lista, aba_cadastro = st.tabs(["📋 Notificações Cadastradas", "➕ Nova Notificação"])
 
 
 # ─────────────────────────────────────────────
@@ -269,9 +269,10 @@ with aba_lista:
 
                 e_funcionarios = []
                 if e_categoria == "SPECIFIC":
+                    opcoes_edicao = list(opcoes_func.keys()) + [n for n in nomes_vinculados if n not in opcoes_func]
                     e_funcionarios = st.multiselect(
                         "Funcionários *",
-                        list(opcoes_func.keys()),
+                        opcoes_edicao,
                         default=nomes_vinculados,
                         key="e_funcs",
                     )
