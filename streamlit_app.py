@@ -14,7 +14,6 @@ st.set_page_config(
 st.markdown("""
 <style>
 [data-testid="stStatusWidget"] { display: none !important; }
-#MainMenu { display: none !important; }
 [data-testid="stToolbar"] { display: none !important; }
 [data-testid="stSidebarCollapsedControl"] { display: flex !important; }
 .block-container { padding-top: 1rem !important; }
