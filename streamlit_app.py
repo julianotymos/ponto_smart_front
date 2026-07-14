@@ -60,6 +60,28 @@ st.markdown("# Ponto Smart\n##### Sistema de Gestao de Ponto Eletronico\n---")
 if "company_name" in st.session_state:
     st.switch_page("pages/1_Dashboard.py")
 
+NOVA_VERSAO_URL = "https://pontosmartmanager.vercel.app"
+
+st.info(
+    f"👉 **Este sistema foi migrado.** Use a partir de agora a nova versão em "
+    f"[{NOVA_VERSAO_URL}]({NOVA_VERSAO_URL})."
+)
+st.link_button("Abrir a nova versão", NOVA_VERSAO_URL, type="primary", use_container_width=True)
+
+st.markdown("<div style='margin: 18px 0'></div>", unsafe_allow_html=True)
+
+if "show_old_version" not in st.session_state:
+    st.session_state["show_old_version"] = False
+
+if not st.session_state["show_old_version"]:
+    if st.button("Acessar a versão antiga (descontinuada)"):
+        st.session_state["show_old_version"] = True
+        st.rerun()
+    st.stop()
+
+st.markdown("---")
+st.caption("⚠️ Versão antiga — descontinuada, sem novas atualizações. Use a nova versão sempre que possível.")
+
 col_form, col_info = st.columns([1, 2])
 
 with col_form:
